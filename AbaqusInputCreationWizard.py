@@ -27,7 +27,7 @@ layout = [
      sg.InputText(key="mesh", size=(58, 1))],
 
     [sg.Text("Add boundary conditions below (one per line):", pad=(1, 5))],
-    [sg.Multiline(key="bound_cond", rstrip=False, autoscroll=True, size=(40, 10), pad=(1, 5))],
+    [sg.Multiline(key="bound_cond", autoscroll=True, size=(40, 10), pad=(1, 5))],
 
     [sg.Radio(".csv", "RADIO1", key='-CSV-', enable_events=True, pad=(1, 5)),
      sg.Radio(".rsp (in development)", "RADIO1", disabled=True, key='-RSP-', enable_events=True, pad=(1, 5))],
@@ -71,24 +71,20 @@ while True:
             main_func(window, values)
 
         case 'Done':
-            sg.popup("SUCCESS!\n\n"
-                     "You can find the file in the directory you selected.",
-                     custom_text="Exit", icon=s_logo)
+            sg.popup("An output folder has been created in the same folder as the .csv file you selected",
+                     custom_text="Exit", icon=s_logo, title="SUCCESS!")
             break
 
         case 'Error':
             error_type = values[event]
 
             if error_type == 'no_file':
-                sg.popup('Ensure a .csv file is selected.', icon=e_logo, title="Error")
+                sg.popup('Ensure a .csv file is selected.', icon=e_logo, title="ERROR!")
 
             if error_type == 'no_input':
-                sg.popup('Ensure the input bar is filled out.', icon=e_logo, title="Error")
+                sg.popup('Ensure a mesh name is entered.', icon=e_logo, title="ERROR!")
 
             if error_type == 'no_bounds':
-                sg.popup('Ensure the boundary conditions are entered.', icon=e_logo, title="Error")
-
-            if error_type == 'no_save_dir':
-                sg.popup('Ensure a save directory is selected.', icon=e_logo, title="Error")
+                sg.popup('Ensure the boundary conditions are entered.', icon=e_logo, title="ERROR!")
 
 window.close()

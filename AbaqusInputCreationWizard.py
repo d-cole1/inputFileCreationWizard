@@ -23,8 +23,8 @@ sg.theme("MyNewTheme")
 sg.set_options(font=("Helvetica", 12))
 
 layout = [
-    [sg.Text("Add mesh name:", size=(15, 1), pad=(1, 15)),
-     sg.InputText(key="mesh", size=(58, 1))],
+    [sg.Text("Add mesh input file name:", size=(20, 1), pad=(1, 15)),
+     sg.InputText(key="mesh", size=(53, 1))],
 
     [sg.Text("Add boundary conditions below (one per line):", pad=(1, 5))],
     [sg.Multiline(key="bound_cond", autoscroll=True, size=(40, 10), pad=(1, 5))],
@@ -78,7 +78,7 @@ while True:
         case 'Error':
             error_type = values[event]
 
-            if error_type == 'no_file':
+            if error_type == 'no_csv':
                 sg.popup('Ensure a .csv file is selected.', icon=e_logo, title="ERROR!")
 
             if error_type == 'no_input':

@@ -9,8 +9,8 @@ def main_func(window, values):
 
     max_data, min_data = get_csv_data(filepath=values['inp1'])
 
-    output_max = generate_save_directory(csv_path=values['inp1'], sub_dir="MAX")
-    output_min = generate_save_directory(csv_path=values['inp1'], sub_dir="MIN")
+    output_max = generate_save_directory(csv_path=values['inp1'], sub_dir="MAX", mesh_name=values['mesh'])
+    output_min = generate_save_directory(csv_path=values['inp1'], sub_dir="MIN", mesh_name=values['mesh'])
 
     write_to_file(dict_arg=max_data, save_dir=output_max, values=values, min_or_max="MAX")
     write_to_file(dict_arg=min_data, save_dir=output_min, values=values, min_or_max="MIN")
@@ -24,7 +24,7 @@ def validate_inputs(window, values):
     user_bounds = values['bound_cond']
 
     if not input_file:
-        window.write_event_value("Error", "no_file")
+        window.write_event_value("Error", "no_csv")
         return False
 
     if not user_mesh:
@@ -45,7 +45,6 @@ def get_csv_data(filepath):
 
     with open(filepath, 'r') as file:
         csv_reader = csv.reader(file)
-
         headers = next(csv_reader)  # Read first row
 
         point_index = headers.index("Point")  # Get index of "Point" header
@@ -60,32 +59,32 @@ def get_csv_data(filepath):
         # Read each row after headers
         for row in csv_reader:
             chan_number = row[chan_number_index]  # Get value of "ChanNumber" for current row
-            if chan_number not in max_values:
-                max_values[chan_number] = []  # Create list for this ChanNumber if not already exist
-            if chan_number not in min_values:
-                min_values[chan_number] = []  # Create list for this ChaNumber if not already exist
 
-            max_row_data = []
-            min_row_data = []
+            # Only process if ChanNumber is in headers
+            if f"Chan{chan_number}" in headers:
+                if chan_number not in max_values:
+                    max_values[chan_number] = []  # Create list for this ChanNumber if not already exist
+                if chan_number not in min_values:
+                    min_values[chan_number] = []  # Create list for this ChanNumber if not already exist
 
-            for i in chan_indices:
-                if i < point_index:  # "Chan" headers before "Point" index
-                    max_row_data.append(row[i])  # Store value in the max list
-                else:  # "Chan" headers after "Point" index
-                    min_row_data.append(row[i])  # Store value in the min list
+                max_row_data = []
+                min_row_data = []
 
-                # Add min or max list to correct dictionary and key
-                """max_values[chan_number] = (max_row_data)
-                min_values[chan_number] = (min_row_data)"""
+                for i in chan_indices:
+                    if i < point_index:  # "Chan" headers before "Point" index
+                        max_row_data.append(row[i])  # Store value in the max list
+                    else:  # "Chan" headers after "Point" index
+                        min_row_data.append(row[i])  # Store value in the min list
 
-            zip_max = zip(nodes_dofs, max_row_data)
-            zip_max_str = [f"{a},{b}" for a, b in zip_max]
+                # Ensure nodes_dofs is correctly paired with max_row_data and min_row_data
+                zip_max = zip(nodes_dofs, max_row_data)
+                zip_max_str = [f"{a},{b}" for a, b in zip_max]
 
-            zip_min = zip(nodes_dofs, min_row_data)
-            zip_min_str = [f"{c},{d}" for c, d in zip_min]
+                zip_min = zip(nodes_dofs, min_row_data)
+                zip_min_str = [f"{c},{d}" for c, d in zip_min]
 
-            max_values[chan_number] = (zip_max_str)
-            min_values[chan_number] = (zip_min_str)
+                max_values[chan_number] = zip_max_str
+                min_values[chan_number] = zip_min_str
 
     return max_values, min_values
 
@@ -97,7 +96,6 @@ def get_nodes_dofs(file_path):
         reader = csv.DictReader(file)
         headers = reader.fieldnames
 
-        # Identify relevant headers
         chan_headers = [header for header in headers if "Chan" in header and header != "ChanTitle"]
 
         for row in reader:
@@ -105,15 +103,16 @@ def get_nodes_dofs(file_path):
             node_id = row["NODE_ID"]
             dof = row["DOF"]
 
-            # Check if ChanNumber is present in any of the Chan headers
-            if any(row[header] == chan_number for header in chan_headers):
+            # Ensure we only add unique (node_id, dof) pairs for each ChanNumber
+            if f"Chan{chan_number}" in chan_headers:
                 result_string = f"{node_id},{dof}"
-                results.append(result_string)
+                if result_string not in results:
+                    results.append(result_string)
 
     return results
 
 
-def generate_save_directory(csv_path, sub_dir):
+def generate_save_directory(csv_path, sub_dir, mesh_name):
     # Extract the directory from the provided CSV file path
     csv_dir = os.path.dirname(csv_path)
 
@@ -122,7 +121,7 @@ def generate_save_directory(csv_path, sub_dir):
     current_date = now.strftime("%d%b%y")
 
     # Create the output directory path
-    output_dir = os.path.join(csv_dir, f"AbaqusWizardOutput_{current_date}")
+    output_dir = os.path.join(csv_dir, f"AbaqusWizardOutput({mesh_name.strip('.inp')})_{current_date}")
 
     # Create the main output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -137,7 +136,6 @@ def generate_save_directory(csv_path, sub_dir):
 def write_to_file(save_dir, values, dict_arg, min_or_max):
     user_mesh = values['mesh']
     user_bounds = values['bound_cond'].splitlines()
-
 
     header1 = [
         "**",

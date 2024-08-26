@@ -45,10 +45,11 @@ def get_csv_data(filepath):
 
     with open(filepath, 'r') as file:
         csv_reader = csv.reader(file)
-        headers = next(csv_reader)  # Read first row
+        headers = next(csv_reader)  # Read first row which contains headers
 
-        point_index = headers.index("Point")  # Get index of "Point" header
-        chan_number_index = headers.index("ChanNumber")  # Get index of "ChanNumber" header
+        # Get index of "Point" and "ChanNumber" headers
+        point_index = headers.index("Point")
+        chan_number_index = headers.index("ChanNumber")
 
         # Identify indices of headers containing "Chan" but not "ChanTitle" or "ChanNumber"
         chan_indices = []
@@ -60,29 +61,33 @@ def get_csv_data(filepath):
         for row in csv_reader:
             chan_number = row[chan_number_index]  # Get value of "ChanNumber" for current row
 
-            # Only process if ChanNumber is in headers
+            # Only process if ChanNumber in headers
             if f"Chan{chan_number}" in headers:
+
+                # Create list for this ChanNumber if not already exists
                 if chan_number not in max_values:
-                    max_values[chan_number] = []  # Create list for this ChanNumber if not already exist
+                    max_values[chan_number] = []
                 if chan_number not in min_values:
-                    min_values[chan_number] = []  # Create list for this ChanNumber if not already exist
+                    min_values[chan_number] = []
 
                 max_row_data = []
                 min_row_data = []
 
+                # Separate data into max and min lists based on position of "Chan" headers
                 for i in chan_indices:
-                    if i < point_index:  # "Chan" headers before "Point" index
+                    if i < point_index:
                         max_row_data.append(row[i])  # Store value in the max list
-                    else:  # "Chan" headers after "Point" index
+                    else:
                         min_row_data.append(row[i])  # Store value in the min list
 
-                # Ensure nodes_dofs is correctly paired with max_row_data and min_row_data
+                # Pair nodes-dofs with max data and min data
                 zip_max = zip(nodes_dofs, max_row_data)
                 zip_max_str = [f"{a},{b}" for a, b in zip_max]
 
                 zip_min = zip(nodes_dofs, min_row_data)
                 zip_min_str = [f"{c},{d}" for c, d in zip_min]
 
+                # Store the paired data in the dictionaries
                 max_values[chan_number] = zip_max_str
                 min_values[chan_number] = zip_min_str
 
@@ -90,26 +95,29 @@ def get_csv_data(filepath):
 
 
 def get_nodes_dofs(file_path):
-    results = []
+    unique_pairs = []
 
     with open(file_path, mode='r') as file:
         reader = csv.DictReader(file)
         headers = reader.fieldnames
 
-        chan_headers = [header for header in headers if "Chan" in header and header != "ChanTitle"]
+        chan_headers = []
+        for header in headers:
+            if "Chan" in header and "ChanTitle" not in header:
+                chan_headers.append(header)
 
         for row in reader:
-            chan_number = row["ChanNumber"]
-            node_id = row["NODE_ID"]
-            dof = row["DOF"]
+            chan_number = row["ChanNumber"]  # Get value of ChanNumber for current row
+            node_id = row["NODE_ID"]  # Get value of NODE_ID for current row
+            dof = row["DOF"]  # Get value of DOF for current row
 
-            # Ensure we only add unique (node_id, dof) pairs for each ChanNumber
+            # Only add unique node_id,dof pairs for each ChanNumber
             if f"Chan{chan_number}" in chan_headers:
-                result_string = f"{node_id},{dof}"
-                if result_string not in results:
-                    results.append(result_string)
+                unique_pair = f"{node_id},{dof}"
+                if unique_pair not in unique_pairs:
+                    unique_pairs.append(unique_pair)
 
-    return results
+    return unique_pairs
 
 
 def generate_save_directory(csv_path, sub_dir, mesh_name):
